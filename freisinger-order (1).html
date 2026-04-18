@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Freisinger Order</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1a4a7a;
+  --text:#f0f0f8;--text2:#c8c8e0;--text3:#9898b8;
+  --accent:#4facfe;--accent-h:#7ec8fd;
+  --red:#ff6b6b;--orange:#ffa94d;--green:#69db7c;
+  --border:rgba(255,255,255,0.12);
+  --card:#1e2d4a;--card2:#243558;
+  --nav:rgba(22,33,62,0.95);
+  --shadow:0 2px 16px rgba(0,0,0,0.4);
+  --shadow2:0 8px 40px rgba(0,0,0,0.6);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;background:#0f1830;position:relative;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:-50%;z-index:-1;background:radial-gradient(ellipse at 20% 20%, rgba(79,172,254,0.15) 0%, transparent 50%),radial-gradient(ellipse at 80% 60%, rgba(26,74,122,0.3) 0%, transparent 50%),radial-gradient(ellipse at 40% 90%, rgba(15,52,96,0.4) 0%, transparent 50%);animation:bgShift 30s ease-in-out infinite alternate;pointer-events:none}
+@keyframes bgShift{0%{transform:translate(0,0) rotate(0deg)}100%{transform:translate(5%,3%) rotate(3deg)}}
+.hidden{display:none!important}
+
+.hero-section{background:linear-gradient(135deg, rgba(30,45,74,0.8) 0%, rgba(15,52,96,0.6) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:24px 28px;margin-bottom:24px;position:relative;overflow:hidden;animation:heroReveal .7s ease-out}
+.hero-section::before{content:'';position:absolute;top:-50%;right:-20%;width:400px;height:400px;background:radial-gradient(circle,rgba(79,172,254,0.15) 0%,transparent 70%);pointer-events:none}
+.hero-greeting{font-size:13px;color:var(--accent);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;position:relative}
+.hero-name{font-size:28px;font-weight:700;letter-spacing:-0.03em;color:var(--text);margin-bottom:4px;position:relative}
+.hero-date{font-size:13px;color:var(--text2);margin-bottom:14px;position:relative}
+.hero-summary{font-size:15px;color:var(--text);font-weight:500;position:relative;padding:10px 14px;background:rgba(79,172,254,0.1);border-left:3px solid var(--accent);border-radius:8px;display:inline-block}
+@keyframes heroReveal{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+.order-card{opacity:0;transform:translateY(16px);animation:cardReveal .5s ease-out forwards}
+@keyframes cardReveal{to{opacity:1;transform:none}}
+.order-card:nth-child(1){animation-delay:0.05s}
+.order-card:nth-child(2){animation-delay:0.10s}
+.order-card:nth-child(3){animation-delay:0.15s}
+.order-card:nth-child(4){animation-delay:0.20s}
+.order-card:nth-child(5){animation-delay:0.25s}
+.order-card:nth-child(6){animation-delay:0.30s}
+.order-card:nth-child(7){animation-delay:0.35s}
+.order-card:nth-child(8){animation-delay:0.40s}
+.order-card:nth-child(n+9){animation-delay:0.45s}
+
+.btn-primary{transition:background .2s,transform .15s,box-shadow .2s}
+.btn-primary:hover{background:var(--accent-h);transform:translateY(-1px);box-shadow:0 4px 16px rgba(79,172,254,0.4)}
+.btn-primary:active{transform:translateY(0)}
+.btn-sm{transition:background .2s,transform .15s,border-color .2s}
+.btn-sm:active{transform:scale(0.97)}
+
+.confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:9999}
+
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:11px;margin-top:4px;max-height:180px;overflow-y:auto;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,0.5)}
+.autocomplete-item{padding:10px 15px;cursor:pointer;font-size:14px;color:var(--text);border-bottom:1px solid var(--border);transition:background .15s}
+.autocomplete-item:last-child{border-bottom:none}
+.autocomplete-item:hover,.autocomplete-item.active{background:rgba(79,172,254,0.15);color:var(--accent-h)}
+.autocomplete-wrap{position:relative}
+
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:radial-gradient(ellipse at 50% 40%, #1a3a6a 0%, #0f1f40 40%, #080f20 100%)}
+#appScreen{display:none;min-height:100vh}
+.login-card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:40px;box-shadow:var(--shadow2)}
+.login-logo{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.login-title{font-size:30px;font-weight:700;letter-spacing:-0.03em;margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--text2);margin-bottom:32px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+.form-input{width:100%;padding:11px 15px;background:var(--bg);border:1px solid var(--border);border-radius:11px;font-size:15px;color:var(--text);font-family:inherit;outline:none;transition:border .2s,box-shadow .2s}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,172,254,0.15)}
+.form-input option{background:var(--bg2)}
+textarea.form-input{resize:vertical;min-height:72px}
+.btn-login{width:100%;padding:13px;background:var(--accent);color:#0a1628;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s;margin-top:8px}
+.btn-login:hover{background:var(--accent-h)}
+.btn-login:disabled{opacity:0.5;cursor:not-allowed}
+.login-error{color:var(--red);font-size:13px;margin-top:10px;text-align:center;min-height:18px}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:54px;display:flex;align-items:center;padding:0 20px;gap:12px}
+.nav-brand{font-size:15px;font-weight:700;letter-spacing:-0.02em}
+.nav-brand span{color:var(--accent)}
+.nav-tabs{display:flex;gap:2px;margin-left:24px}
+.nav-tab{padding:6px 14px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;transition:background .2s,color .2s;position:relative}
+.nav-tab.active{background:var(--bg3);color:var(--text)}
+.nav-tab .ntab-badge{position:absolute;top:2px;right:2px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.nav-user-badge{font-size:12px;font-weight:600;color:var(--text);background:var(--bg3);padding:4px 12px;border-radius:980px;border:1px solid var(--border)}
+.btn-logout{font-size:12px;color:var(--text3);background:none;border:1px solid var(--border);cursor:pointer;font-family:inherit;padding:5px 12px;border-radius:8px;transition:color .2s,border-color .2s}
+.btn-logout:hover{color:var(--red);border-color:var(--red)}
+
+main{padding:74px 20px 48px;max-width:960px;margin:0 auto}
+
+.notif-banner{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;flex-direction:column;gap:6px}
+.notif-title{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px}
+.notif-item{font-size:13px;color:var(--text);padding:6px 10px;background:var(--card2);border-radius:8px;border-left:3px solid var(--accent)}
+.notif-item.red{border-left-color:var(--red)}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:linear-gradient(135deg, rgba(30,45,74,0.8) 0%, rgba(36,53,88,0.7) 100%);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 22px;box-shadow:var(--shadow);transition:transform .2s}
+.stat-card:hover{transform:translateY(-2px)}
+.stat-num{font-size:34px;font-weight:700;letter-spacing:-0.04em;line-height:1}
+.stat-label{font-size:12px;color:var(--text);margin-top:5px;font-weight:500}
+.s-red .stat-num{color:var(--red)}
+.s-orange .stat-num{color:var(--orange)}
+.s-blue .stat-num{color:var(--accent)}
+.s-green .stat-num{color:var(--green)}
+
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.section-title{font-size:19px;font-weight:700;letter-spacing:-0.02em}
+.row-gap{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+.btn-primary{background:var(--accent);color:#0a1628;border:none;border-radius:980px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s}
+.btn-primary:hover{background:var(--accent-h)}
+.btn-sm{padding:6px 14px;border-radius:980px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--card2);color:var(--text);transition:background .2s}
+.btn-sm:hover{background:var(--bg3)}
+.btn-sm.blue{background:rgba(79,172,254,0.12);border-color:rgba(79,172,254,0.25);color:var(--accent)}
+.btn-sm.blue:hover{background:rgba(79,172,254,0.22)}
+.btn-sm.green{background:rgba(105,219,124,0.12);border-color:rgba(105,219,124,0.25);color:var(--green)}
+.btn-sm.green:hover{background:rgba(105,219,124,0.22)}
+.btn-sm.red{background:rgba(255,107,107,0.12);border-color:rgba(255,107,107,0.25);color:var(--red)}
+.btn-sm.red:hover{background:rgba(255,107,107,0.22)}
+.btn-icon{background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:4px 7px;border-radius:6px;transition:color .2s}
+.btn-icon:hover{color:var(--red)}
+
+.search-wrap{position:relative;flex:1;min-width:200px;max-width:320px}
+.search-wrap input{width:100%;padding:8px 14px 8px 36px;background:var(--card);border:1px solid var(--border);border-radius:980px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border .2s}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+
+.filter-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-btn{padding:5px 13px;border-radius:980px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--card);color:var(--text);transition:all .2s}
+.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#0a1628}
+
+.orders-list{display:flex;flex-direction:column;gap:10px}
+.order-card{background:linear-gradient(135deg, rgba(30,45,74,0.85) 0%, rgba(36,53,88,0.75) 100%);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);transition:box-shadow .25s,border-color .25s,transform .25s}
+.order-card:hover{box-shadow:var(--shadow2);border-color:rgba(79,172,254,0.3);transform:translateY(-2px)}
+.order-card.dringend{border-left:3px solid var(--orange)}
+.order-card.verzoegert{border-left:3px solid var(--red);background:linear-gradient(135deg, rgba(60,30,40,0.9) 0%, rgba(80,40,50,0.8) 100%)}
+.order-card.verzoegert .order-name{color:#ff9999}
+.order-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.order-left{flex:1;min-width:0}
+.order-nr{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px}
+.order-name{font-size:16px;font-weight:600;letter-spacing:-0.01em}
+.order-meta{font-size:13px;color:var(--text2);margin-top:5px;display:flex;flex-wrap:wrap;gap:10px}
+.order-badges{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 10px;border-radius:980px;letter-spacing:0.02em;text-transform:uppercase;white-space:nowrap}
+.badge-dringend{background:rgba(255,169,77,0.15);color:var(--orange);border:1px solid rgba(255,169,77,0.3)}
+.badge-normal{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.badge-ausstehend{background:rgba(255,169,77,0.12);color:var(--orange);border:1px solid rgba(255,169,77,0.2)}
+.badge-bestellt{background:rgba(79,172,254,0.12);color:var(--accent);border:1px solid rgba(79,172,254,0.2)}
+.badge-geliefert{background:rgba(105,219,124,0.12);color:var(--green);border:1px solid rgba(105,219,124,0.2)}
+.badge-verzoegert{background:rgba(255,107,107,0.15);color:var(--red);border:1px solid rgba(255,107,107,0.3)}
+.order-detail{font-size:13px;color:var(--text2);margin-top:7px}
+.order-detail strong{color:var(--accent-h);font-weight:600}
+.order-note{margin-top:10px;padding:9px 13px;background:var(--bg2);border-radius:9px;font-size:13px;color:var(--text);border:1px solid var(--border)}
+.order-note.angekommen{border-left:3px solid var(--green);color:var(--green);background:var(--bg2)}
+.order-note.verzoegert-note{border-left:3px solid var(--red);color:var(--red);font-weight:700;background:var(--bg2)}
+.order-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}
+
+.pdf-section{margin-top:12px;padding:12px 14px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)}
+.pdf-label{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px}
+.pdf-list{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.pdf-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--card2);border-radius:8px;border:1px solid var(--border)}
+.pdf-name{font-size:13px;color:var(--accent);cursor:pointer;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdf-name:hover{color:var(--accent-h)}
+.pdf-upload label{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;padding:5px 12px;border-radius:8px;border:1px dashed var(--border);transition:border-color .2s,color .2s}
+.pdf-upload label:hover{border-color:var(--accent);color:var(--accent)}
+.pdf-upload input{display:none}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);z-index:300;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:30px;width:100%;max-width:480px;box-shadow:var(--shadow2);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:19px;font-weight:700;letter-spacing:-0.02em;margin-bottom:22px}
+.modal-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+.btn-cancel{padding:9px 20px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--bg2);color:var(--text2)}
+.btn-save{padding:9px 20px;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:none;background:var(--accent);color:#0a1628}
+.btn-save:hover{background:var(--accent-h)}
+.btn-save.green-btn{background:var(--green);color:#0a2010}
+.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.user-table{width:100%;border-collapse:collapse;margin-top:8px}
+.user-table th{text-align:left;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--border)}
+.user-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px}
+.user-table tr:last-child td{border-bottom:none}
+
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-text{font-size:15px;font-weight:500;margin-top:8px}
+
+.divider{height:1px;background:var(--border);margin:20px 0}
+
+.hist-section{margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)}
+.hist-label{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px}
+.hist-item{display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px}
+.hist-item:last-child{border-bottom:none}
+.hist-von{font-weight:700;color:var(--accent)}
+.hist-aktion{color:var(--text)}
+.hist-zeit{color:var(--text2);white-space:nowrap;font-size:11px}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(15,24,48,0.9);display:flex;align-items:center;justify-content:center;z-index:9998;flex-direction:column;gap:16px}
+.loading-spinner{width:40px;height:40px;border:3px solid rgba(79,172,254,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
+.loading-text{font-size:14px;color:var(--text2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media print{
+nav,.order-actions,.pdf-upload,.btn-icon,.filter-bar,.search-wrap,.notif-banner,.stats{display:none!important}
+body,html{background:#fff;color:#000}
+.order-card{border:1px solid #ccc;box-shadow:none;break-inside:avoid;margin-bottom:10px;background:#fff}
+.order-name,.order-nr{color:#000}
+.order-meta,.order-detail{color:#555}
+.badge{border:1px solid #ccc;color:#333}
+}
+
+@media(max-width:640px){
+.stats{grid-template-columns:1fr 1fr}
+.nav-tabs{display:none}
+.modal{padding:22px 18px}
+.input-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Metallbau Freisinger</div>
+    <div class="login-title">Freisinger Order</div>
+    <div class="login-sub">Bestell- &amp; Lieferverwaltung</div>
+    <div class="form-group">
+      <label>E-Mail</label>
+      <input class="form-input" id="loginUser" type="email" placeholder="name@freisinger-niro.at" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Passwort</label>
+      <input class="form-input" id="loginPass" type="password" placeholder="Passwort" autocomplete="current-password"/>
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">Anmelden</button>
+    <div class="login-error" id="loginError"></div>
+    <div style="text-align:center;margin-top:18px;font-size:12px;color:var(--text3)">
+      <a href="#" onclick="doPasswordReset();return false;" style="color:var(--accent);text-decoration:none">Passwort vergessen?</a>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <nav>
+    <div class="nav-brand">Freisinger <span>Order</span></div>
+    <div class="nav-tabs" id="navTabs"></div>
+    <div class="nav-right">
+      <div class="nav-user-badge" id="navBadge"></div>
+      <button class="btn-logout" onclick="doLogout()">Abmelden</button>
+    </div>
+  </nav>
+  <main id="mainContent"></main>
+</div>
+
+<!-- MODAL: NEUE BESTELLUNG WERKSTATT -->
+<div class="modal-overlay" id="modalWerkstatt">
+  <div class="modal">
+    <div class="modal-title">Neue Bestellung — Werkstatt</div>
+    <div class="form-group">
+      <label>Bestellnummer</label>
+      <input class="form-input" value="26-0001" readonly style="opacity:0.5;cursor:not-allowed"/>
+    </div>
+    <div class="form-group">
+      <label>Artikel *</label>
+      <div class="autocomplete-wrap">
+        <input class="form-input" id="wArtikel" type="text" placeholder="z.B. Edelstahlrohr 50mm" autocomplete="off" oninput="showSuggestions(this,'w')"/>
+        <div class="autocomplete-list hidden" id="wSuggest"></div>
+      </div>
+    </div>
+    <div class="input-grid">
+      <div class="form-group">
+        <label>Menge *</label>
+        <input class="form-input" id="wMenge" type="number" min="1" placeholder="10"/>
+      </div>
+      <div class="form-group">
+        <label>Einheit</label>
+        <input class="form-input" id="wEinheit" type="text" placeholder="z.B. Stück, kg, m ..."/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Dringlichkeit</label>
+      <select class="form-input" id="wDring">
+        <option value="normal">Normal</option>
+        <option value="dringend">Dringend</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Bemerkung (optional)</label>
+      <textarea class="form-input" id="wBemerkung" placeholder="Zusätzliche Informationen..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalWerkstatt')">Abbrechen</button>
+      <button class="btn-save" onclick="saveWerkstattOrder()">Absenden</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NEUE BESTELLUNG PROJEKTBÜRO -->
+<div class="modal-overlay" id="modalProjekt">
+  <div class="modal">
+    <div class="modal-title">Neue Bestellung — Büro</div>
+    <div class="form-group">
+      <label>Vorgangsnummer * (z.B. 26-1547)</label>
+      <input class="form-input" id="pNummer" type="text" placeholder="26-"/>
+    </div>
+    <div class="form-group">
+      <label>Lieferant *</label>
+      <div class="autocomplete-wrap">
+        <input class="form-input" id="pLieferant" type="text" placeholder="z.B. Stahl GmbH" autocomplete="off" oninput="showLieferantSuggestions(this,'pLief')" onfocus="showLieferantSuggestions(this,'pLief')"/>
+        <div class="autocomplete-list hidden" id="pLiefSuggest"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Artikel / Beschreibung *</label>
+      <div class="autocomplete-wrap">
+        <input class="form-input" id="pArtikel" type="text" placeholder="z.B. Glasscheibe 10mm klar" autocomplete="off" oninput="showSuggestions(this,'p')"/>
+        <div class="autocomplete-list hidden" id="pSuggest"></div>
+      </div>
+    </div>
+    <div class="input-grid">
+      <div class="form-group">
+        <label>Menge *</label>
+        <input class="form-input" id="pMenge" type="number" min="1" placeholder="10"/>
+      </div>
+      <div class="form-group">
+        <label>Einheit</label>
+        <input class="form-input" id="pEinheit" type="text" placeholder="z.B. Stück, kg, m ..."/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Voraussichtlicher Liefertermin *</label>
+      <input class="form-input" id="pLiefertermin" type="date"/>
+    </div>
+    <div class="form-group">
+      <label>Bruttowert (EUR)</label>
+      <input class="form-input" id="pBrutto" type="text" placeholder="z.B. 320,00"/>
+    </div>
+    <div class="form-group">
+      <label>Dringlichkeit</label>
+      <select class="form-input" id="pDring">
+        <option value="normal">Normal</option>
+        <option value="dringend">Dringend</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Bemerkung (optional)</label>
+      <textarea class="form-input" id="pBemerkung" placeholder="Zusätzliche Informationen..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalProjekt')">Abbrechen</button>
+      <button class="btn-save" onclick="saveProjektOrder()">Absenden</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BESTELLEN -->
+<div class="modal-overlay" id="modalBestellen">
+  <div class="modal">
+    <div class="modal-title">Bestellung aufgeben</div>
+    <input type="hidden" id="bOrderId"/>
+    <div class="form-group">
+      <label>Lieferant *</label>
+      <div class="autocomplete-wrap">
+        <input class="form-input" id="bLieferant" type="text" placeholder="z.B. Stahl GmbH" autocomplete="off" oninput="showLieferantSuggestions(this,'bLief')" onfocus="showLieferantSuggestions(this,'bLief')"/>
+        <div class="autocomplete-list hidden" id="bLiefSuggest"></div>
+      </div>
+    </div>
+    <div class="input-grid">
+      <div class="form-group">
+        <label>Bestellte Menge</label>
+        <input class="form-input" id="bMenge" type="number" min="1"/>
+      </div>
+      <div class="form-group">
+        <label>Einheit</label>
+        <input class="form-input" id="bEinheit" type="text" placeholder="z.B. Stück, kg, m ..."/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Voraussichtlicher Liefertermin *</label>
+      <input class="form-input" id="bLiefertermin" type="date"/>
+    </div>
+    <div class="form-group">
+      <label>Bruttowert (EUR, nur intern)</label>
+      <input class="form-input" id="bBrutto" type="text" placeholder="z.B. 142,50"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalBestellen')">Abbrechen</button>
+      <button class="btn-save" onclick="saveBestellen()">Bestellt</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ANGEKOMMEN -->
+<div class="modal-overlay" id="modalAngekommen">
+  <div class="modal">
+    <div class="modal-title">Ware angekommen</div>
+    <input type="hidden" id="aOrderId"/>
+    <div class="form-group">
+      <label>Kommentar (optional)</label>
+      <textarea class="form-input" id="aKommentar" placeholder="z.B. Nur 3 von 5 Stück geliefert, Rest folgt..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalAngekommen')">Abbrechen</button>
+      <button class="btn-save green-btn" onclick="saveAngekommen()">Angekommen</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: TERMIN -->
+<div class="modal-overlay" id="modalTermin">
+  <div class="modal">
+    <div class="modal-title">Liefertermin verschieben</div>
+    <input type="hidden" id="tOrderId"/>
+    <div class="form-group">
+      <label>Neuer Liefertermin *</label>
+      <input class="form-input" id="tNeuTermin" type="date"/>
+    </div>
+    <div class="form-group">
+      <label>Grund (optional)</label>
+      <input class="form-input" id="tGrund" type="text" placeholder="z.B. Lieferant verzögert"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalTermin')">Abbrechen</button>
+      <button class="btn-save" onclick="saveTerminVerschoben()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: RETOURE -->
+<div class="modal-overlay" id="modalRetoure">
+  <div class="modal">
+    <div class="modal-title">Retoure melden</div>
+    <input type="hidden" id="rOrderId"/>
+    <div class="form-group">
+      <label>Grund für Retoure *</label>
+      <textarea class="form-input" id="rGrund" placeholder="z.B. Glasscheiben hatten Kratzer, werden zurückgeschickt"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalRetoure')">Abbrechen</button>
+      <button class="btn-save" style="background:var(--red);color:#fff" onclick="saveRetoure()">Retoure melden</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT WERKSTATT -->
+<div class="modal-overlay" id="modalEditWerkstatt">
+  <div class="modal">
+    <div class="modal-title">Bestellung bearbeiten</div>
+    <input type="hidden" id="ewId"/>
+    <div class="form-group"><label>Artikel *</label><input class="form-input" id="ewArtikel" type="text"/></div>
+    <div class="input-grid">
+      <div class="form-group"><label>Menge *</label><input class="form-input" id="ewMenge" type="number" min="1"/></div>
+      <div class="form-group"><label>Einheit</label><input class="form-input" id="ewEinheit" type="text"/></div>
+    </div>
+    <div class="form-group"><label>Dringlichkeit</label>
+      <select class="form-input" id="ewDring"><option value="normal">Normal</option><option value="dringend">Dringend</option></select>
+    </div>
+    <div class="form-group"><label>Bemerkung</label><textarea class="form-input" id="ewBemerkung"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalEditWerkstatt')">Abbrechen</button>
+      <button class="btn-save" onclick="saveEditWerkstatt()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT PROJEKT -->
+<div class="modal-overlay" id="modalEditProjekt">
+  <div class="modal">
+    <div class="modal-title">Bestellung bearbeiten</div>
+    <input type="hidden" id="epId"/>
+    <div class="form-group"><label>Vorgangsnummer *</label><input class="form-input" id="epNummer" type="text"/></div>
+    <div class="form-group"><label>Lieferant *</label>
+      <div class="autocomplete-wrap">
+        <input class="form-input" id="epLieferant" type="text" autocomplete="off" oninput="showLieferantSuggestions(this,'epLief')"/>
+        <div class="autocomplete-list hidden" id="epLiefSuggest"></div>
+      </div>
+    </div>
+    <div class="form-group"><label>Artikel *</label><input class="form-input" id="epArtikel" type="text"/></div>
+    <div class="input-grid">
+      <div class="form-group"><label>Menge *</label><input class="form-input" id="epMenge" type="number" min="1"/></div>
+      <div class="form-group"><label>Einheit</label><input class="form-input" id="epEinheit" type="text"/></div>
+    </div>
+    <div class="form-group"><label>Liefertermin *</label><input class="form-input" id="epLiefertermin" type="date"/></div>
+    <div class="form-group"><label>Bruttowert (EUR)</label><input class="form-input" id="epBrutto" type="text"/></div>
+    <div class="form-group"><label>Dringlichkeit</label>
+      <select class="form-input" id="epDring"><option value="normal">Normal</option><option value="dringend">Dringend</option></select>
+    </div>
+    <div class="form-group"><label>Bemerkung</label><textarea class="form-input" id="epBemerkung"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modalEditProjekt')">Abbrechen</button>
+      <button class="btn-save" onclick="saveEditProjekt()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// SUPABASE CLIENT
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://ebjxabrybwuwraacigit.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HZ5qS6jaqvQgxGbwb0EAww_v_blCxX4';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════════════════
+// STATE (In-Memory Cache — Quelle der Wahrheit ist die DB)
+// ═══════════════════════════════════════════════════════════
+let CU = null;
+let ordersCache = [];
+let pdfsCache = [];
+let notifsCache = [];
+let stellvertreterCache = null;
+let profilesCache = [];
+let seenOrdersSet = new Set();
+let currentView = 'bestellungen';
+let filterStatus = 'alle';
+let searchQuery = '';
+let ownerFilter = 'alle';
+let archivSearch = '';
+let realtimeChannel = null;
+
+// ═══════════════════════════════════════════════════════════
+// HILFSFUNKTIONEN
+// ═══════════════════════════════════════════════════════════
+function rolleLabel(r){ return {einkauf:'Büro',werkstatt:'Werkstatt',projektbuero:'Büro'}[r]||r; }
+const isWerkstatt = () => CU && CU.rolle==='werkstatt';
+const isProjektbuero = () => CU && CU.rolle==='projektbuero';
+const isEinkauf = () => CU && CU.rolle==='einkauf';
+const isBuero = () => CU && (CU.rolle==='einkauf'||CU.rolle==='projektbuero');
+
+function formatDate(d){
+  if(!d) return '';
+  return new Date(d).toLocaleDateString('de-AT');
+}
+
+// ═══════════════════════════════════════════════════════════
+// FELD-MAPPER (DB snake_case ↔ JS camelCase)
+// ═══════════════════════════════════════════════════════════
+function orderDbToJs(row, pdfs=[]){
+  return {
+    id: row.id,
+    typ: row.typ,
+    nr: row.nr,
+    artikel: row.artikel,
+    menge: row.menge,
+    einheit: row.einheit,
+    dring: row.dring,
+    bemerkung: row.bemerkung || '',
+    status: row.status,
+    ersteller: row.ersteller,
+    erstellerId: row.ersteller_id,
+    rolle: row.rolle,
+    datum: row.datum,
+    lieferant: row.lieferant || '',
+    liefertermin: row.liefertermin || '',
+    brutto: row.brutto || '',
+    kommentar: row.kommentar || '',
+    kommentarVon: row.kommentar_von || '',
+    archiviertAm: row.archiviert_am || '',
+    projekt: row.projekt || '',
+    retoure: row.retoure || null,
+    historie: row.historie || [],
+    pdfs: pdfs
+  };
+}
+
+function notifDbToJs(row){
+  return {
+    id: row.id,
+    forUser: row.for_user,
+    forRolle: row.for_rolle,
+    text: row.text,
+    type: row.type,
+    read: row.read
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATEN LADEN
+// ═══════════════════════════════════════════════════════════
+async function loadProfiles(){
+  const { data, error } = await supabase.from('profiles').select('*');
+  if(error){ console.error('loadProfiles', error); return; }
+  profilesCache = data || [];
+}
+
+async function loadOrders(){
+  const [oRes, pRes] = await Promise.all([
+    supabase.from('orders').select('*').order('datum', { ascending: false }),
+    supabase.from('order_pdfs').select('*').order('uploaded_at', { ascending: true })
+  ]);
+  if(oRes.error){ console.error('loadOrders', oRes.error); return; }
+  if(pRes.error){ console.error('loadPdfs', pRes.error); return; }
+  pdfsCache = pRes.data || [];
+  ordersCache = (oRes.data || []).map(o => {
+    const pdfs = pdfsCache.filter(p => p.order_id === o.id);
+    return orderDbToJs(o, pdfs);
+  });
+}
+
+async function loadNotifs(){
+  const { data, error } = await supabase
+    .from('notifications').select('*')
+    .order('created_at', { ascending: false });
+  if(error){ console.error('loadNotifs', error); return; }
+  notifsCache = (data || []).map(notifDbToJs);
+}
+
+async function loadStellvertreter(){
+  const { data, error } = await supabase
+    .from('stellvertreter').select('*').maybeSingle();
+  if(error){ console.error('loadStellvertreter', error); return; }
+  stellvertreterCache = data ? {
+    userId: data.user_id,
+    bis: data.bis,
+    aktiviertVon: data.aktiviert_von,
+    aktiviertAm: data.aktiviert_am
+  } : null;
+}
+
+async function loadSeenOrders(){
+  if(!CU) return;
+  const { data, error } = await supabase
+    .from('seen_orders').select('order_id')
+    .eq('user_id', CU.id);
+  if(error){ console.error('loadSeenOrders', error); return; }
+  seenOrdersSet = new Set((data || []).map(s => s.order_id));
+}
+
+async function loadAll(){
+  await Promise.all([
+    loadProfiles(),
+    loadOrders(),
+    loadNotifs(),
+    loadStellvertreter(),
+    loadSeenOrders()
+  ]);
+}
+
+// ═══════════════════════════════════════════════════════════
+// REALTIME SYNCHRONISATION
+// ═══════════════════════════════════════════════════════════
+function setupRealtime(){
+  if(realtimeChannel) supabase.removeChannel(realtimeChannel);
+  realtimeChannel = supabase.channel('freisinger-order')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async () => {
+      await loadOrders();
+      if(CU) renderView(currentView);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'order_pdfs' }, async () => {
+      await loadOrders();
+      if(CU) renderView(currentView);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, async () => {
+      await loadNotifs();
+      if(CU) renderView(currentView);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stellvertreter' }, async () => {
+      await loadStellvertreter();
+      if(CU) renderView(currentView);
+    })
+    .subscribe();
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+async function doLogin(){
+  const email = document.getElementById('loginUser').value.trim().toLowerCase();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('btnLogin');
+  errEl.textContent = '';
+  if(!email || !password){ errEl.textContent = 'Bitte E-Mail und Passwort eingeben.'; return; }
+  btn.disabled = true; btn.textContent = 'Anmeldung läuft...';
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if(error){
+    errEl.textContent = 'E-Mail oder Passwort falsch.';
+    btn.disabled = false; btn.textContent = 'Anmelden';
+    return;
+  }
+
+  const { data: profile, error: profErr } = await supabase
+    .from('profiles').select('*')
+    .eq('id', data.user.id).single();
+  if(profErr || !profile){
+    errEl.textContent = 'Benutzerprofil nicht gefunden. Bitte Admin kontaktieren.';
+    await supabase.auth.signOut();
+    btn.disabled = false; btn.textContent = 'Anmelden';
+    return;
+  }
+
+  CU = { id: data.user.id, email: data.user.email, name: profile.name, rolle: profile.rolle };
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  btn.disabled = false; btn.textContent = 'Anmelden';
+
+  await loadAll();
+  setupRealtime();
+  enterApp();
+}
+
+async function doLogout(){
+  if(realtimeChannel){ supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+  await supabase.auth.signOut();
+  CU = null;
+  ordersCache = []; pdfsCache = []; notifsCache = []; stellvertreterCache = null; profilesCache = []; seenOrdersSet = new Set();
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display = 'none';
+}
+
+async function doPasswordReset(){
+  const email = document.getElementById('loginUser').value.trim().toLowerCase();
+  if(!email){ alert('Bitte zuerst deine E-Mail oben eingeben, dann auf "Passwort vergessen" tippen.'); return; }
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  alert('Wir haben dir eine E-Mail geschickt. Folge dem Link, um ein neues Passwort zu setzen.');
+}
+
+async function checkSession(){
+  const { data: { session } } = await supabase.auth.getSession();
+  if(!session) return false;
+  const { data: profile, error } = await supabase
+    .from('profiles').select('*')
+    .eq('id', session.user.id).single();
+  if(error || !profile) return false;
+  CU = { id: session.user.id, email: session.user.email, name: profile.name, rolle: profile.rolle };
+  await loadAll();
+  setupRealtime();
+  return true;
+}
+
+function enterApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  let label = CU.name + ' · ' + rolleLabel(CU.rolle);
+  if(isStellvertreter()) label += ' (Vertreter)';
+  document.getElementById('navBadge').textContent = label;
+  buildNav();
+  renderView('bestellungen');
+}
+
+// ═══════════════════════════════════════════════════════════
+// GETTER (für unveränderten Render-Code)
+// ═══════════════════════════════════════════════════════════
+function getOrders(){ return ordersCache; }
+function getNotifs(){ return notifsCache; }
+function getStellvertreter(){ return stellvertreterCache; }
+
+function isStellvertreter(){
+  const sv = getStellvertreter();
+  if(!sv || !CU) return false;
+  const now = new Date();
+  const bis = new Date(sv.bis);
+  bis.setHours(23,59,59);
+  return sv.userId === CU.id && now <= bis;
+}
+
+function isVerzoegert(order){
+  if(!order.liefertermin || order.status==='geliefert') return false;
+  const now = new Date();
+  const lt = new Date(order.liefertermin);
+  lt.setHours(23,59,59);
+  if(now <= lt) return false;
+  if(isWerkstatt()) return true;
+  const day = now.getDay();
+  const hour = now.getHours();
+  if(day > 4 || (day === 4 && hour >= 9)) return true;
+  if(day === 5 || day === 6) return true;
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════════
+function buildNav(){
+  const tabs = [
+    {id:'bestellungen', label:'Bestellungen'},
+    {id:'archiv', label:'Archiv'}
+  ];
+  if(isEinkauf()) tabs.push({id:'admin', label:'Verwaltung'});
+  const navTabs = document.getElementById('navTabs');
+  navTabs.innerHTML = tabs.map(t => `
+    <button class="nav-tab${t.id==='bestellungen'?' active':''}" id="ntab-${t.id}" onclick="renderView('${t.id}')">
+      ${t.label}
+      ${t.id==='bestellungen'?'<span class="ntab-badge hidden" id="newBadge"></span>':''}
+    </button>`).join('');
+  updateNewBadge();
+}
+
+function setActiveTab(id){
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const el = document.getElementById('ntab-' + id);
+  if(el) el.classList.add('active');
+}
+
+function updateNewBadge(){
+  if(!isEinkauf()) return;
+  const newCount = ordersCache.filter(o => o.status==='ausstehend' && !seenOrdersSet.has(o.id)).length;
+  const badge = document.getElementById('newBadge');
+  if(!badge) return;
+  if(newCount > 0){ badge.textContent = newCount; badge.classList.remove('hidden'); }
+  else badge.classList.add('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════════════════════════════
+function renderView(view){
+  currentView = view;
+  setActiveTab(view);
+  const el = document.getElementById('mainContent');
+  if(view==='bestellungen') el.innerHTML = buildBestellungen();
+  else if(view==='archiv') el.innerHTML = buildArchiv();
+  else if(view==='admin') el.innerHTML = buildAdmin();
+
+  if(view==='bestellungen' && isEinkauf()){
+    markAllSeen();
+  }
+}
+
+async function markAllSeen(){
+  const unseenOrders = ordersCache.filter(o => !seenOrdersSet.has(o.id));
+  if(!unseenOrders.length) return;
+  const rows = unseenOrders.map(o => ({ user_id: CU.id, order_id: o.id }));
+  const { error } = await supabase.from('seen_orders').upsert(rows, { onConflict: 'user_id,order_id' });
+  if(!error){
+    unseenOrders.forEach(o => seenOrdersSet.add(o.id));
+    updateNewBadge();
+  }
+}
+
+function buildBestellungen(){
+  let orders = getOrders().filter(o => !o.archiviertAm);
+  if(isProjektbuero()) orders = orders.filter(o => o.typ==='projektbuero');
+
+  orders.sort((a, b) => {
+    const av = isVerzoegert(a) ? 0 : 1, bv = isVerzoegert(b) ? 0 : 1;
+    if(av !== bv) return av - bv;
+    const ad = a.dring==='dringend' ? 0 : 1, bd = b.dring==='dringend' ? 0 : 1;
+    if(ad !== bd) return ad - bd;
+    const so = { ausstehend:0, bestellt:1, geliefert:2 };
+    if(so[a.status] !== so[b.status]) return so[a.status] - so[b.status];
+    return new Date(b.datum) - new Date(a.datum);
+  });
+
+  const notifs = getNotifs().filter(n => n.forUser===CU.id || n.forRolle===CU.rolle);
+  const unreadNotifs = notifs.filter(n => !n.read);
+
+  let html = '';
+  const now = new Date();
+  const hour = now.getHours();
+  let greeting = 'Hallo';
+  if(hour < 11) greeting = 'Guten Morgen';
+  else if(hour < 18) greeting = 'Guten Tag';
+  else greeting = 'Guten Abend';
+
+  let summaryText = '';
+  const userOrders = getOrders().filter(o => !o.archiviertAm);
+  if(isEinkauf()){
+    const aus = userOrders.filter(o => o.status==='ausstehend').length;
+    const verz = userOrders.filter(o => isVerzoegert(o) && o.status!=='geliefert').length;
+    if(verz > 0) summaryText = `${verz} ${verz===1?'Bestellung':'Bestellungen'} im Verzug`;
+    else if(aus > 0) summaryText = `${aus} neue ${aus===1?'Bestellung wartet':'Bestellungen warten'} auf dich`;
+    else summaryText = 'Alles erledigt — super Arbeit';
+  } else if(isWerkstatt()){
+    const bestellt = userOrders.filter(o => o.status==='bestellt' && !o.kommentar).length;
+    const verz = userOrders.filter(o => isVerzoegert(o) && o.status!=='geliefert').length;
+    if(verz > 0) summaryText = `${verz} ${verz===1?'Lieferung ist':'Lieferungen sind'} überfällig`;
+    else if(bestellt > 0) summaryText = `${bestellt} ${bestellt===1?'Lieferung':'Lieferungen'} erwartet`;
+    else summaryText = 'Keine offenen Lieferungen';
+  } else {
+    const own = userOrders.filter(o => o.erstellerId===CU.id).length;
+    summaryText = own > 0 ? `${own} ${own===1?'aktive Bestellung':'aktive Bestellungen'}` : 'Keine aktiven Bestellungen';
+  }
+
+  const dateStr = now.toLocaleDateString('de-AT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  html += `<div class="hero-section">
+    <div class="hero-greeting">${greeting}</div>
+    <div class="hero-name">${CU.name}</div>
+    <div class="hero-date">${dateStr}</div>
+    <div class="hero-summary">${summaryText}</div>
+  </div>`;
+
+  if(unreadNotifs.length > 0){
+    html += `<div class="notif-banner">
+      <div class="notif-title">Neue Meldungen</div>
+      ${unreadNotifs.map(n => `<div class="notif-item${n.type==='verzoegert'?' red':''}">${n.text} <button onclick="markNotifRead('${n.id}')" style="float:right;background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">OK</button></div>`).join('')}
+    </div>`;
+  }
+
+  const all = getOrders();
+  if(isEinkauf()){
+    const verz = all.filter(o => isVerzoegert(o) && o.status!=='geliefert').length;
+    const aus = all.filter(o => o.status==='ausstehend').length;
+    const best = all.filter(o => o.status==='bestellt').length;
+    html += `<div class="stats">
+      <div class="stat-card s-red"><div class="stat-num">${verz}</div><div class="stat-label">Im Verzug</div></div>
+      <div class="stat-card s-orange"><div class="stat-num">${aus}</div><div class="stat-label">Ausstehend</div></div>
+      <div class="stat-card s-blue"><div class="stat-num">${best}</div><div class="stat-label">Bestellt</div></div>
+    </div>`;
+  } else if(isWerkstatt()){
+    const aktiv = all.filter(o => !o.archiviertAm);
+    const verz = aktiv.filter(o => isVerzoegert(o) && o.status!=='geliefert').length;
+    const erwartet = aktiv.filter(o => o.status==='bestellt' && !o.kommentar).length;
+    const heute = aktiv.filter(o => {
+      if(!o.liefertermin || o.status==='geliefert') return false;
+      const lt = new Date(o.liefertermin);
+      return lt.toDateString() === now.toDateString();
+    }).length;
+    html += `<div class="stats">
+      <div class="stat-card s-red"><div class="stat-num">${verz}</div><div class="stat-label">Überfällig</div></div>
+      <div class="stat-card s-orange"><div class="stat-num">${heute}</div><div class="stat-label">Heute erwartet</div></div>
+      <div class="stat-card s-blue"><div class="stat-num">${erwartet}</div><div class="stat-label">Offene Lieferungen</div></div>
+    </div>`;
+  } else if(isProjektbuero()){
+    const ownAktiv = all.filter(o => !o.archiviertAm && o.erstellerId===CU.id);
+    const verz = ownAktiv.filter(o => isVerzoegert(o) && o.status!=='geliefert').length;
+    const offen = ownAktiv.filter(o => o.status==='bestellt' && !o.kommentar).length;
+    const dieseWoche = ownAktiv.filter(o => {
+      if(!o.liefertermin || o.status==='geliefert') return false;
+      const lt = new Date(o.liefertermin);
+      const diff = (lt - now) / (1000 * 60 * 60 * 24);
+      return diff >= 0 && diff <= 7;
+    }).length;
+    html += `<div class="stats">
+      <div class="stat-card s-red"><div class="stat-num">${verz}</div><div class="stat-label">Im Verzug</div></div>
+      <div class="stat-card s-orange"><div class="stat-num">${dieseWoche}</div><div class="stat-label">Diese Woche</div></div>
+      <div class="stat-card s-blue"><div class="stat-num">${offen}</div><div class="stat-label">Offene Bestellungen</div></div>
+    </div>`;
+  }
+
+  html += `<div class="section-hd">
+    <div class="section-title">${isEinkauf()?'Alle Bestellungen':isWerkstatt()?'Bestellungen &amp; Lieferungen':'Büro-Bestellungen'}</div>
+    <div class="row-gap">`;
+
+  if(isEinkauf()){
+    html += `<div class="search-wrap"><span class="search-icon">&#128269;</span><input type="text" placeholder="Suche nach Nr. oder Artikel..." value="${searchQuery}" oninput="doSearch(this.value)"/></div>`;
+    html += `<button class="btn-sm" onclick="window.print()">Drucken</button>`;
+  }
+
+  if(isWerkstatt()) html += `<button class="btn-primary" onclick="openModal('modalWerkstatt')">Neue Bestellung</button>`;
+  if(isProjektbuero()) html += `<button class="btn-primary" onclick="openModal('modalProjekt')">Neue Bestellung</button>`;
+  if(isEinkauf()) html += `<button class="btn-primary" onclick="openModal('modalWerkstatt')">Werkstatt-Bestellung</button>`;
+
+  html += `</div></div>`;
+
+  if(isBuero()){
+    html += `<div class="filter-bar">
+      <button class="filter-btn${ownerFilter==='alle'?' active':''}" onclick="setOwnerFilter('alle')">Alle</button>
+      <button class="filter-btn${ownerFilter==='meine'?' active':''}" onclick="setOwnerFilter('meine')">Nur meine</button>
+    </div>`;
+  }
+
+  if(isEinkauf()){
+    html += `<div class="filter-bar">
+      ${['alle','ausstehend','bestellt','geliefert','dringend','verzoegert'].map(f => `
+        <button class="filter-btn${filterStatus===f?' active':''}" onclick="setFilter('${f}')">${
+          { alle:'Alle', ausstehend:'Ausstehend', bestellt:'Bestellt', geliefert:'Geliefert', dringend:'Dringend', verzoegert:'Im Verzug' }[f]
+        }</button>`).join('')}
+    </div>`;
+
+    if(filterStatus==='verzoegert') orders = getOrders().filter(o => isVerzoegert(o) && o.status!=='geliefert');
+    else if(filterStatus==='dringend') orders = getOrders().filter(o => !o.archiviertAm && o.dring==='dringend');
+    else if(filterStatus!=='alle') orders = getOrders().filter(o => !o.archiviertAm && o.status===filterStatus);
+
+    if(searchQuery.trim()){
+      const q = searchQuery.toLowerCase();
+      orders = orders.filter(o => o.nr.toLowerCase().includes(q) || o.artikel.toLowerCase().includes(q));
+    }
+  }
+
+  if(isBuero() && ownerFilter==='meine'){
+    orders = orders.filter(o => o.erstellerId===CU.id);
+  }
+
+  if(!orders.length){
+    html += `<div class="empty"><div class="empty-text">Keine Bestellungen vorhanden</div></div>`;
+  } else {
+    html += `<div class="orders-list">${orders.map(o => renderCard(o)).join('')}</div>`;
+  }
+  return html;
+}
+
+function renderCard(o, archiv=false){
+  const verz = isVerzoegert(o);
+  const statusLabel = { ausstehend:'Ausstehend', bestellt:'Bestellt', geliefert:'Geliefert' }[o.status];
+  const dBadge = o.dring==='dringend'
+    ? `<span class="badge badge-dringend">Dringend</span>`
+    : `<span class="badge badge-normal">Normal</span>`;
+  const sBadge = verz && o.status!=='geliefert'
+    ? `<span class="badge badge-verzoegert">Im Verzug</span>`
+    : `<span class="badge badge-${o.status}">${statusLabel}</span>`;
+
+  let details = '';
+  details += `<div class="order-detail">Erstellt von: <strong>${o.ersteller}</strong> &middot; ${rolleLabel(o.rolle)} &middot; ${new Date(o.datum).toLocaleDateString('de-AT')} ${new Date(o.datum).toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'})}</div>`;
+  if(o.lieferant) details += `<div class="order-detail">Lieferant: <strong>${o.lieferant}</strong></div>`;
+  if(o.brutto && !isWerkstatt()) details += `<div class="order-detail">Bruttowert: <strong>${o.brutto} EUR</strong></div>`;
+  if(o.liefertermin) details += `<div class="order-detail">Liefertermin: <strong>${formatDate(o.liefertermin)}</strong>${verz && o.status!=='geliefert'?' <span style="color:var(--red);font-weight:700">— Überfällig</span>':''}</div>`;
+
+  const bemerkung = o.bemerkung ? `<div class="order-note">${o.bemerkung}</div>` : '';
+  const kommentar = o.kommentar ? `<div class="order-note angekommen">${o.kommentar}${o.kommentarVon?' <span style="font-size:11px;opacity:0.7">— '+o.kommentarVon+'</span>':''}</div>` : '';
+  const retoure = o.retoure ? `<div class="order-note verzoegert-note">RETOURE: ${o.retoure.grund} <span style="font-size:11px;opacity:0.8">— ${o.retoure.von}, ${new Date(o.retoure.zeit).toLocaleDateString('de-AT')}</span></div>` : '';
+  const verzNote = verz && o.status!=='geliefert' && isWerkstatt() ? `<div class="order-note verzoegert-note">Liefertermin überschritten — bitte prüfen</div>` : '';
+
+  const pdfs = o.pdfs || [];
+  let pdfHtml = '';
+  if(isBuero() && (pdfs.length > 0 || !archiv)){
+    const items = pdfs.map(p => `
+      <div class="pdf-item">
+        <span class="pdf-name" onclick="openPdf('${p.id}')">${p.name}</span>
+        ${!archiv && isBuero()?`<button class="btn-icon" onclick="deletePdf('${p.id}')" title="Entfernen">&times;</button>`:''}
+      </div>`).join('');
+    pdfHtml = `<div class="pdf-section">
+      <div class="pdf-label">Auftragsbestätigungen</div>
+      ${pdfs.length?`<div class="pdf-list">${items}</div>`:'<div style="font-size:13px;color:var(--text2);margin-bottom:6px">Noch keine Dokumente angehängt</div>'}
+      ${!archiv?`<div class="pdf-upload"><label><input type="file" accept="application/pdf" onchange="uploadPdf('${o.id}',this)"/>Dokument anhängen</label></div>`:''}
+    </div>`;
+  }
+
+  const hist = o.historie || [];
+  let histHtml = '';
+  if(hist.length > 1){
+    histHtml = `<div class="hist-section">
+      <div class="hist-label">Verlauf</div>
+      ${hist.map(h => `<div class="hist-item"><span class="hist-von">${h.von}</span><span class="hist-aktion">${h.aktion}</span><span class="hist-zeit">${new Date(h.zeit).toLocaleDateString('de-AT')} ${new Date(h.zeit).toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}
+    </div>`;
+  }
+
+  let actions = '';
+  if(!archiv){
+    const actsAsWerkstatt = isWerkstatt() || isStellvertreter();
+    if(isEinkauf()){
+      if(o.typ==='werkstatt' && o.status==='ausstehend')
+        actions += `<button class="btn-sm blue" onclick="openBestellModal('${o.id}')">Als Bestellt markieren</button>`;
+      if(o.status==='bestellt'){
+        actions += `<button class="btn-sm" onclick="openTerminModal('${o.id}')">Termin verschieben</button>`;
+        actions += `<button class="btn-sm green" onclick="markGeliefert('${o.id}')">Als Geliefert markieren</button>`;
+        actions += `<button class="btn-sm" onclick="undoStatus('${o.id}')">Zurücksetzen</button>`;
+      }
+      actions += `<button class="btn-sm red" onclick="deleteOrder('${o.id}')">Löschen</button>`;
+    }
+    if(isWerkstatt() && o.typ==='werkstatt' && o.status==='ausstehend'){
+      actions += `<button class="btn-sm" onclick="openEditWerkstatt('${o.id}')">Bearbeiten</button>`;
+      actions += `<button class="btn-sm red" onclick="deleteOrder('${o.id}')">Löschen</button>`;
+    }
+    if(actsAsWerkstatt && o.status==='bestellt' && !o.kommentar){
+      actions += `<button class="btn-sm green" onclick="openAngekommenModal('${o.id}')">Ware angekommen</button>`;
+    }
+    if(isProjektbuero() && o.erstellerId===CU.id){
+      if(o.status==='bestellt'){
+        actions += `<button class="btn-sm" onclick="openTerminModal('${o.id}')">Termin verschieben</button>`;
+      }
+      actions += `<button class="btn-sm" onclick="openEditProjekt('${o.id}')">Bearbeiten</button>`;
+      actions += `<button class="btn-sm red" onclick="deleteOrder('${o.id}')">Löschen</button>`;
+    }
+    if(isProjektbuero() && o.erstellerId===CU.id && o.status==='bestellt' && !o.kommentar){
+      actions += `<button class="btn-sm green" onclick="openAngekommenModal('${o.id}')">Ware angekommen</button>`;
+    }
+  }
+  if(archiv && (isEinkauf() || (isProjektbuero() && o.erstellerId===CU.id) || isWerkstatt())){
+    actions += `<button class="btn-sm red" onclick="openRetoureModal('${o.id}')">Retoure melden</button>`;
+  }
+
+  return `
+  <div class="order-card${o.dring==='dringend'?' dringend':''}${verz && o.status!=='geliefert'?' verzoegert':''}">
+    <div class="order-top">
+      <div class="order-left">
+        <div class="order-nr">${o.nr} &middot; ${new Date(o.datum).toLocaleDateString('de-AT')}</div>
+        <div class="order-name">${o.artikel}</div>
+        <div class="order-meta">
+          <span>${o.menge} ${o.einheit||''}</span>
+          ${o.projekt && isEinkauf()?`<span>Vorgang: ${o.projekt}</span>`:''}
+        </div>
+      </div>
+      <div class="order-badges">${dBadge}${sBadge}</div>
+    </div>
+    ${details}
+    ${bemerkung}
+    ${verzNote}
+    ${kommentar}
+    ${retoure}
+    ${pdfHtml}
+    ${histHtml}
+    ${actions?`<div class="order-actions">${actions}</div>`:''}
+  </div>`;
+}
+
+function buildArchiv(){
+  let orders = getOrders().filter(o => o.status==='geliefert' && o.archiviertAm);
+  if(isWerkstatt()) orders = orders.filter(o => o.typ==='werkstatt');
+  if(isProjektbuero()) orders = orders.filter(o => o.typ==='projektbuero');
+  orders.sort((a, b) => new Date(b.archiviertAm) - new Date(a.archiviertAm));
+
+  if(archivSearch.trim()){
+    const q = archivSearch.toLowerCase();
+    orders = orders.filter(o =>
+      o.nr.toLowerCase().includes(q) ||
+      o.artikel.toLowerCase().includes(q) ||
+      (o.lieferant && o.lieferant.toLowerCase().includes(q))
+    );
+  }
+
+  let html = `<div class="section-hd">
+    <div class="section-title">Archiv — Erledigte Bestellungen</div>
+    <div class="row-gap">
+      <div class="search-wrap"><span class="search-icon">&#128269;</span><input type="text" placeholder="Nr., Artikel oder Lieferant..." value="${archivSearch}" oninput="doArchivSearch(this.value)"/></div>
+    </div>
+  </div>`;
+  if(!orders.length){
+    const msg = archivSearch.trim() ? 'Keine Treffer' : 'Archiv ist leer';
+    html += `<div class="empty"><div class="empty-text">${msg}</div></div>`;
+  } else {
+    html += `<div class="orders-list">${orders.map(o => renderCard(o, true)).join('')}</div>`;
+  }
+  return html;
+}
+
+function buildAdmin(){
+  const sv = getStellvertreter();
+  const svActive = sv && new Date() <= new Date(sv.bis + 'T23:59:59');
+  let svUser = null;
+  if(sv) svUser = profilesCache.find(u => u.id===sv.userId);
+
+  let html = `<div class="section-hd"><div class="section-title">Stellvertreter-Funktion</div></div>`;
+  html += `<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:28px">`;
+
+  if(svActive && svUser){
+    html += `<div style="font-size:14px;color:var(--text);margin-bottom:12px;">
+      <strong style="color:var(--accent)">${svUser.name}</strong> vertritt Tobi bis <strong>${formatDate(sv.bis)}</strong>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">${svUser.name} kann in dieser Zeit Waren als angekommen abhaken.</div>
+    </div>
+    <button class="btn-sm red" onclick="clearStellvertreter()">Stellvertretung beenden</button>`;
+  } else {
+    html += `<div style="font-size:13px;color:var(--text2);margin-bottom:14px;">Wenn Tobi nicht verfügbar ist (Urlaub, Krankheit), kann hier ein Stellvertreter aktiviert werden. Dieser kann dann Waren als angekommen abhaken.</div>
+    <div class="input-grid" style="margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Stellvertreter</label>
+        <select class="form-input" id="svUser">
+          ${profilesCache.filter(u => u.rolle!=='werkstatt').map(u => `<option value="${u.id}">${u.name} (${rolleLabel(u.rolle)})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Vertritt bis</label>
+        <input class="form-input" id="svBis" type="date"/>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveStellvertreter()">Stellvertretung aktivieren</button>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="section-hd"><div class="section-title">Benutzerverwaltung</div></div>`;
+  html += `<div style="font-size:13px;color:var(--text2);margin-bottom:14px;">Passwort-Änderungen laufen über Supabase. User können über "Passwort vergessen" auf der Login-Seite ihr Passwort selbst zurücksetzen.</div>`;
+  html += `<table class="user-table">
+    <thead><tr><th>Name</th><th>Rolle</th></tr></thead><tbody>
+    ${profilesCache.sort((a,b) => a.name.localeCompare(b.name)).map(u => `<tr>
+      <td><strong>${u.name}</strong></td>
+      <td>${rolleLabel(u.rolle)}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FILTER & SUCHE
+// ═══════════════════════════════════════════════════════════
+function setFilter(f){ filterStatus = f; renderView('bestellungen'); }
+function doSearch(q){ searchQuery = q; renderView('bestellungen'); }
+function setOwnerFilter(f){ ownerFilter = f; renderView('bestellungen'); }
+function doArchivSearch(q){ archivSearch = q; renderView('archiv'); }
+
+// ═══════════════════════════════════════════════════════════
+// BESTELLUNGEN ERSTELLEN/ÄNDERN
+// ═══════════════════════════════════════════════════════════
+async function saveWerkstattOrder(){
+  const a = document.getElementById('wArtikel').value.trim();
+  const m = document.getElementById('wMenge').value.trim();
+  if(!a || !m){ alert('Bitte Artikel und Menge angeben.'); return; }
+  const payload = {
+    typ: 'werkstatt',
+    nr: '26-0001',
+    artikel: a,
+    menge: m,
+    einheit: document.getElementById('wEinheit').value,
+    dring: document.getElementById('wDring').value,
+    bemerkung: document.getElementById('wBemerkung').value.trim() || null,
+    status: 'ausstehend',
+    ersteller: CU.name,
+    ersteller_id: CU.id,
+    rolle: CU.rolle,
+    historie: [{ aktion:'Erstellt', von:CU.name, zeit:new Date().toISOString() }]
+  };
+  const { error } = await supabase.from('orders').insert(payload);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  closeModal('modalWerkstatt');
+}
+
+async function saveProjektOrder(){
+  const nr = document.getElementById('pNummer').value.trim();
+  const li = document.getElementById('pLieferant').value.trim();
+  const a = document.getElementById('pArtikel').value.trim();
+  const m = document.getElementById('pMenge').value.trim();
+  const lt = document.getElementById('pLiefertermin').value;
+  if(!nr || !li || !a || !m || !lt){ alert('Bitte alle Pflichtfelder ausfüllen.'); return; }
+  const payload = {
+    typ: 'projektbuero',
+    nr: nr,
+    artikel: a,
+    menge: m,
+    einheit: document.getElementById('pEinheit').value,
+    dring: document.getElementById('pDring').value,
+    bemerkung: document.getElementById('pBemerkung').value.trim() || null,
+    status: 'bestellt',
+    ersteller: CU.name,
+    ersteller_id: CU.id,
+    rolle: CU.rolle,
+    lieferant: li,
+    liefertermin: lt,
+    brutto: document.getElementById('pBrutto').value.trim() || null,
+    projekt: nr,
+    historie: [{ aktion:'Erstellt', von:CU.name, zeit:new Date().toISOString() }]
+  };
+  const { error } = await supabase.from('orders').insert(payload);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  closeModal('modalProjekt');
+}
+
+function openBestellModal(id){
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  document.getElementById('bOrderId').value = id;
+  document.getElementById('bMenge').value = o.menge;
+  document.getElementById('bEinheit').value = o.einheit || '';
+  document.getElementById('bLieferant').value = '';
+  document.getElementById('bLiefertermin').value = '';
+  document.getElementById('bBrutto').value = '';
+  openModal('modalBestellen');
+}
+
+async function saveBestellen(){
+  const id = document.getElementById('bOrderId').value;
+  const li = document.getElementById('bLieferant').value.trim();
+  const lt = document.getElementById('bLiefertermin').value;
+  if(!li || !lt){ alert('Bitte Lieferant und Liefertermin angeben.'); return; }
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  const newHist = [...(o.historie||[]), { aktion:`Als Bestellt markiert (Lieferant: ${li}, Termin: ${formatDate(lt)})`, von:CU.name, zeit:new Date().toISOString() }];
+  const { error } = await supabase.from('orders').update({
+    status: 'bestellt',
+    lieferant: li,
+    liefertermin: lt,
+    menge: document.getElementById('bMenge').value,
+    einheit: document.getElementById('bEinheit').value,
+    brutto: document.getElementById('bBrutto').value.trim() || null,
+    historie: newHist
+  }).eq('id', id);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  await addNotif({ for_rolle:'werkstatt', text:`Bestellt: ${o.artikel} (Nr. ${o.nr}) — Liefertermin: ${formatDate(lt)}`, type:'bestellt' });
+  closeModal('modalBestellen');
+}
+
+async function markGeliefert(id){
+  if(!confirm('Bestellung als geliefert markieren?')) return;
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  const newHist = [...(o.historie||[]), { aktion:'Als Geliefert markiert', von:CU.name, zeit:new Date().toISOString() }];
+  const { error } = await supabase.from('orders').update({
+    status: 'geliefert',
+    archiviert_am: new Date().toISOString(),
+    historie: newHist
+  }).eq('id', id);
+  if(error) alert('Fehler: ' + error.message);
+}
+
+function openAngekommenModal(id){
+  document.getElementById('aOrderId').value = id;
+  document.getElementById('aKommentar').value = '';
+  openModal('modalAngekommen');
+}
+
+async function saveAngekommen(){
+  const id = document.getElementById('aOrderId').value;
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  const komm = document.getElementById('aKommentar').value.trim() || 'Ware angekommen.';
+  const newHist = [...(o.historie||[]), { aktion:`Ware angekommen: ${komm}`, von:CU.name, zeit:new Date().toISOString() }];
+  const { error } = await supabase.from('orders').update({
+    kommentar: komm,
+    kommentar_von: CU.name,
+    status: 'geliefert',
+    archiviert_am: new Date().toISOString(),
+    historie: newHist
+  }).eq('id', id);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  if(o.typ==='werkstatt'){
+    await addNotif({ for_rolle:'einkauf', text:`Werkstatt: "${o.artikel}" angekommen. ${komm}`, type:'angekommen' });
+  } else {
+    await addNotif({ for_rolle:'einkauf', text:`Ware angekommen: "${o.artikel}" (Nr. ${o.nr}). ${komm}`, type:'angekommen' });
+    await addNotif({ for_rolle:'projektbuero', text:`Ware angekommen: "${o.artikel}" (Nr. ${o.nr}). ${komm}`, type:'angekommen' });
+  }
+  closeModal('modalAngekommen');
+  launchConfetti();
+}
+
+async function undoStatus(id){
+  if(!confirm('Status einen Schritt zurücksetzen?')) return;
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  let update = {};
+  if(o.status==='bestellt'){
+    update = {
+      status:'ausstehend', lieferant:null, liefertermin:null, brutto:null,
+      historie: [...(o.historie||[]), { aktion:'Status zurückgesetzt auf Ausstehend', von:CU.name, zeit:new Date().toISOString() }]
+    };
+  } else if(o.status==='geliefert'){
+    update = {
+      status:'bestellt', archiviert_am:null, kommentar:null, kommentar_von:null,
+      historie: [...(o.historie||[]), { aktion:'Status zurückgesetzt auf Bestellt', von:CU.name, zeit:new Date().toISOString() }]
+    };
+  }
+  const { error } = await supabase.from('orders').update(update).eq('id', id);
+  if(error) alert('Fehler: ' + error.message);
+}
+
+function openEditWerkstatt(id){
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  document.getElementById('ewId').value = id;
+  document.getElementById('ewArtikel').value = o.artikel;
+  document.getElementById('ewMenge').value = o.menge;
+  document.getElementById('ewEinheit').value = o.einheit || '';
+  document.getElementById('ewDring').value = o.dring;
+  document.getElementById('ewBemerkung').value = o.bemerkung || '';
+  document.getElementById('modalEditWerkstatt').classList.add('open');
+}
+
+async function saveEditWerkstatt(){
+  const id = document.getElementById('ewId').value;
+  const a = document.getElementById('ewArtikel').value.trim();
+  const m = document.getElementById('ewMenge').value.trim();
+  if(!a || !m){ alert('Bitte Artikel und Menge angeben.'); return; }
+  const o = ordersCache.find(x => x.id===id);
+  const newHist = [...(o.historie||[]), { aktion:'Bestellung bearbeitet', von:CU.name, zeit:new Date().toISOString() }];
+  const { error } = await supabase.from('orders').update({
+    artikel: a, menge: m,
+    einheit: document.getElementById('ewEinheit').value,
+    dring: document.getElementById('ewDring').value,
+    bemerkung: document.getElementById('ewBemerkung').value.trim() || null,
+    historie: newHist
+  }).eq('id', id);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  closeModal('modalEditWerkstatt');
+}
+
+function openEditProjekt(id){
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  document.getElementById('epId').value = id;
+  document.getElementById('epNummer').value = o.nr;
+  document.getElementById('epLieferant').value = o.lieferant || '';
+  document.getElementById('epArtikel').value = o.artikel;
+  document.getElementById('epMenge').value = o.menge;
+  document.getElementById('epEinheit').value = o.einheit || '';
+  document.getElementById('epLiefertermin').value = o.liefertermin || '';
+  document.getElementById('epBrutto').value = o.brutto || '';
+  document.getElementById('epDring').value = o.dring;
+  document.getElementById('epBemerkung').value = o.bemerkung || '';
+  document.getElementById('modalEditProjekt').classList.add('open');
+}
+
+async function saveEditProjekt(){
+  const id = document.getElementById('epId').value;
+  const nr = document.getElementById('epNummer').value.trim();
+  const li = document.getElementById('epLieferant').value.trim();
+  const a = document.getElementById('epArtikel').value.trim();
+  const m = document.getElementById('epMenge').value.trim();
+  const lt = document.getElementById('epLiefertermin').value;
+  if(!nr || !li || !a || !m || !lt){ alert('Bitte alle Pflichtfelder ausfüllen.'); return; }
+  const o = ordersCache.find(x => x.id===id);
+  const newHist = [...(o.historie||[]), { aktion:'Bestellung bearbeitet', von:CU.name, zeit:new Date().toISOString() }];
+  const { error } = await supabase.from('orders').update({
+    nr:nr, lieferant:li, artikel:a, menge:m,
+    einheit: document.getElementById('epEinheit').value,
+    liefertermin: lt,
+    brutto: document.getElementById('epBrutto').value.trim() || null,
+    dring: document.getElementById('epDring').value,
+    bemerkung: document.getElementById('epBemerkung').value.trim() || null,
+    projekt: nr,
+    historie: newHist
+  }).eq('id', id);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  closeModal('modalEditProjekt');
+}
+
+async function deleteOrder(id){
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  if(!confirm(`Bestellung "${o.artikel}" (Nr. ${o.nr}) wirklich löschen?\n\nDies kann nicht rückgängig gemacht werden.`)) return;
+  // Zuerst zugehörige PDFs aus dem Storage löschen
+  const orderPdfs = pdfsCache.filter(p => p.order_id===id);
+  if(orderPdfs.length){
+    await supabase.storage.from('order-pdfs').remove(orderPdfs.map(p => p.storage_path));
+  }
+  const { error } = await supabase.from('orders').delete().eq('id', id);
+  if(error) alert('Fehler: ' + error.message);
+}
+
+// ═══════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════
+async function addNotif(n){
+  const payload = {
+    for_user: n.forUser || n.for_user || null,
+    for_rolle: n.forRolle || n.for_rolle || null,
+    text: n.text,
+    type: n.type || null,
+    read: false
+  };
+  const { error } = await supabase.from('notifications').insert(payload);
+  if(error) console.error('addNotif', error);
+}
+
+async function markNotifRead(id){
+  const { error } = await supabase.from('notifications').update({ read:true }).eq('id', id);
+  if(error) alert('Fehler: ' + error.message);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PDFs
+// ═══════════════════════════════════════════════════════════
+async function uploadPdf(orderId, input){
+  const file = input.files[0];
+  if(!file){ return; }
+  if(file.size > 8*1024*1024){ alert('Datei zu groß (max. 8 MB).'); input.value=''; return; }
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storagePath = `${orderId}/${Date.now()}_${safeName}`;
+
+  const { error: upErr } = await supabase.storage
+    .from('order-pdfs').upload(storagePath, file, { contentType: 'application/pdf' });
+  if(upErr){ alert('Upload fehlgeschlagen: ' + upErr.message); input.value=''; return; }
+
+  const { error: dbErr } = await supabase.from('order_pdfs').insert({
+    order_id: orderId,
+    name: file.name,
+    storage_path: storagePath,
+    uploaded_by: CU.id
+  });
+  if(dbErr){
+    await supabase.storage.from('order-pdfs').remove([storagePath]);
+    alert('Fehler: ' + dbErr.message);
+  }
+  input.value = '';
+}
+
+async function openPdf(pdfId){
+  const pdf = pdfsCache.find(p => p.id===pdfId);
+  if(!pdf){ alert('PDF nicht gefunden.'); return; }
+  const { data, error } = await supabase.storage
+    .from('order-pdfs').createSignedUrl(pdf.storage_path, 3600);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
+async function deletePdf(pdfId){
+  if(!confirm('Dokument entfernen?')) return;
+  const pdf = pdfsCache.find(p => p.id===pdfId);
+  if(!pdf) return;
+  await supabase.storage.from('order-pdfs').remove([pdf.storage_path]);
+  const { error } = await supabase.from('order_pdfs').delete().eq('id', pdfId);
+  if(error) alert('Fehler: ' + error.message);
+}
+
+// ═══════════════════════════════════════════════════════════
+// STELLVERTRETER
+// ═══════════════════════════════════════════════════════════
+async function saveStellvertreter(){
+  const userId = document.getElementById('svUser').value;
+  const bis = document.getElementById('svBis').value;
+  if(!userId || !bis){ alert('Bitte Stellvertreter und Datum angeben.'); return; }
+  const payload = {
+    id: 1,
+    user_id: userId,
+    bis: bis,
+    aktiviert_von: CU.name,
+    aktiviert_am: new Date().toISOString()
+  };
+  const { error } = await supabase.from('stellvertreter').upsert(payload);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  const user = profilesCache.find(u => u.id===userId);
+  alert(`${user.name} vertritt Tobi bis ${formatDate(bis)}.`);
+}
+
+async function clearStellvertreter(){
+  if(!confirm('Stellvertretung wirklich beenden?')) return;
+  const { error } = await supabase.from('stellvertreter').delete().eq('id', 1);
+  if(error) alert('Fehler: ' + error.message);
+}
+
+// ═══════════════════════════════════════════════════════════
+// TERMIN
+// ═══════════════════════════════════════════════════════════
+function openTerminModal(id){
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  document.getElementById('tOrderId').value = id;
+  document.getElementById('tNeuTermin').value = o.liefertermin || '';
+  document.getElementById('tGrund').value = '';
+  openModal('modalTermin');
+}
+
+async function saveTerminVerschoben(){
+  const id = document.getElementById('tOrderId').value;
+  const neuTermin = document.getElementById('tNeuTermin').value;
+  const grund = document.getElementById('tGrund').value.trim();
+  if(!neuTermin){ alert('Bitte neuen Liefertermin angeben.'); return; }
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  const grundTxt = grund ? ` — Grund: ${grund}` : '';
+  const newHist = [...(o.historie||[]), { aktion:`Liefertermin verschoben von ${formatDate(o.liefertermin)} auf ${formatDate(neuTermin)}${grundTxt}`, von:CU.name, zeit:new Date().toISOString() }];
+  const { error } = await supabase.from('orders').update({
+    liefertermin: neuTermin,
+    historie: newHist
+  }).eq('id', id);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  await addNotif({ for_rolle:'werkstatt', text:`Liefertermin verschoben: "${o.artikel}" (Nr. ${o.nr}) → neuer Termin: ${formatDate(neuTermin)}`, type:'termin' });
+  closeModal('modalTermin');
+}
+
+// ═══════════════════════════════════════════════════════════
+// RETOURE
+// ═══════════════════════════════════════════════════════════
+function openRetoureModal(id){
+  document.getElementById('rOrderId').value = id;
+  document.getElementById('rGrund').value = '';
+  openModal('modalRetoure');
+}
+
+async function saveRetoure(){
+  const id = document.getElementById('rOrderId').value;
+  const grund = document.getElementById('rGrund').value.trim();
+  if(!grund){ alert('Bitte Grund für Retoure angeben.'); return; }
+  const o = ordersCache.find(x => x.id===id);
+  if(!o) return;
+  const newHist = [...(o.historie||[]), { aktion:`RETOURE gemeldet: ${grund}`, von:CU.name, zeit:new Date().toISOString() }];
+  const { error } = await supabase.from('orders').update({
+    historie: newHist,
+    retoure: { grund:grund, von:CU.name, zeit:new Date().toISOString() }
+  }).eq('id', id);
+  if(error){ alert('Fehler: ' + error.message); return; }
+  await addNotif({ for_rolle:'einkauf', text:`RETOURE: "${o.artikel}" (Nr. ${o.nr}) — ${grund} — gemeldet von ${CU.name}`, type:'retoure' });
+  if(o.erstellerId !== CU.id){
+    await addNotif({ for_user:o.erstellerId, text:`RETOURE deiner Bestellung: "${o.artikel}" (Nr. ${o.nr}) — ${grund}`, type:'retoure' });
+  }
+  closeModal('modalRetoure');
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTOCOMPLETE
+// ═══════════════════════════════════════════════════════════
+function getArticleSuggestions(){
+  const seen = new Set();
+  const items = [];
+  ordersCache.forEach(o => {
+    const key = (o.artikel||'').toLowerCase().trim();
+    if(!seen.has(key) && o.artikel){
+      seen.add(key);
+      items.push(o.artikel);
+    }
+  });
+  return items;
+}
+
+function getLieferantSuggestions(){
+  const seen = new Set();
+  const items = [];
+  ordersCache.forEach(o => {
+    if(!o.lieferant) return;
+    const key = o.lieferant.toLowerCase().trim();
+    if(!seen.has(key)){
+      seen.add(key);
+      items.push(o.lieferant);
+    }
+  });
+  return items.sort((a,b) => a.localeCompare(b));
+}
+
+function showLieferantSuggestions(input, prefix){
+  const val = input.value.trim().toLowerCase();
+  const list = document.getElementById(prefix + 'Suggest');
+  if(!list) return;
+  const all = getLieferantSuggestions();
+  const suggestions = val.length===0
+    ? all.slice(0, 6)
+    : all.filter(s => s.toLowerCase().includes(val)).slice(0, 6);
+  if(suggestions.length===0){ list.classList.add('hidden'); return; }
+  list.innerHTML = suggestions.map(s => `<div class="autocomplete-item" onclick="pickLieferant('${prefix}',\`${s.replace(/`/g,'\\`')}\`)">${s}</div>`).join('');
+  list.classList.remove('hidden');
+}
+
+function pickLieferant(prefix, text){
+  const map = { pLief:'pLieferant', bLief:'bLieferant', epLief:'epLieferant' };
+  const inputId = map[prefix];
+  if(inputId) document.getElementById(inputId).value = text;
+  document.getElementById(prefix + 'Suggest').classList.add('hidden');
+}
+
+function showSuggestions(input, prefix){
+  const val = input.value.trim().toLowerCase();
+  const list = document.getElementById(prefix + 'Suggest');
+  if(!val || val.length < 2){ list.classList.add('hidden'); return; }
+  const suggestions = getArticleSuggestions().filter(s => s.toLowerCase().includes(val)).slice(0, 6);
+  if(suggestions.length===0){ list.classList.add('hidden'); return; }
+  list.innerHTML = suggestions.map(s => `<div class="autocomplete-item" onclick="pickSuggestion('${prefix}',\`${s.replace(/`/g,'\\`')}\`)">${s}</div>`).join('');
+  list.classList.remove('hidden');
+}
+
+function pickSuggestion(prefix, text){
+  document.getElementById(prefix + 'Artikel').value = text;
+  document.getElementById(prefix + 'Suggest').classList.add('hidden');
+}
+
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.autocomplete-wrap')){
+    document.querySelectorAll('.autocomplete-list').forEach(l => l.classList.add('hidden'));
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════════════════
+function openModal(id){
+  document.getElementById(id).querySelectorAll('input:not([readonly]):not([type=hidden]),textarea,select').forEach(el => {
+    if(el.type==='checkbox') el.checked = false;
+    else if(el.tagName==='SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.addEventListener('click', e => {
+  if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+});
+
+// ═══════════════════════════════════════════════════════════
+// CONFETTI
+// ═══════════════════════════════════════════════════════════
+function launchConfetti(){
+  const canvas = document.createElement('canvas');
+  canvas.className = 'confetti-canvas';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  const colors = ['#4facfe','#7ec8fd','#69db7c','#ffa94d','#ff6b6b','#ffffff'];
+  const pieces = [];
+  for(let i = 0; i < 80; i++){
+    pieces.push({
+      x: canvas.width/2 + (Math.random()-0.5)*100,
+      y: canvas.height/2,
+      vx: (Math.random()-0.5)*12,
+      vy: Math.random()*-12 - 5,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      size: Math.random()*6+4,
+      rotation: Math.random()*Math.PI*2,
+      vr: (Math.random()-0.5)*0.3,
+      life: 1
+    });
+  }
+  let frame = 0;
+  function animate(){
+    frame++;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.35;
+      p.rotation += p.vr; p.life -= 0.012;
+      if(p.life > 0){
+        ctx.save();
+        ctx.globalAlpha = p.life;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+        ctx.restore();
+      }
+    });
+    if(frame < 120) requestAnimationFrame(animate);
+    else canvas.remove();
+  }
+  animate();
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('loginUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPass').focus(); });
+
+(async function init(){
+  const ok = await checkSession();
+  if(ok) enterApp();
+})();
+</script>
+</body>
+</html>
